@@ -51,26 +51,32 @@ jobs:
       - name: Align Java and Kotlin JVM targets
         run: |
           cat > "$RUNNER_TEMP/jvm-target.gradle" <<'EOF'
-          import org.gradle.api.tasks.compile.JavaCompile
           import org.gradle.api.JavaVersion
+          import org.gradle.api.tasks.compile.JavaCompile
 
-          // Apply after Android Gradle Plugin has configured its compile tasks.
-          gradle.projectsEvaluated {
-            allprojects {
-              def androidExtension = extensions.findByName('android')
+          // Configure Android while its plugin is being applied, before AGP
+          // finalizes compileOptions during project configuration.
+          gradle.beforeProject { project ->
+            def alignAndroid = {
+              def androidExtension = project.extensions.findByName('android')
               if (androidExtension != null) {
-                androidExtension.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
-                androidExtension.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+                androidExtension.compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+                }
               }
+            }
 
-              // Force every Java compile task to emit Java 17 bytecode.
-              tasks.withType(JavaCompile).all {
-                sourceCompatibility = JavaVersion.VERSION_17.toString()
-                targetCompatibility = JavaVersion.VERSION_17.toString()
-              }
+            project.plugins.withId('com.android.application') { alignAndroid() }
+            project.plugins.withId('com.android.library') { alignAndroid() }
 
-              // Keep Kotlin compile tasks on the same JVM target.
-              tasks.configureEach { task ->
+            // Match all Java and Kotlin compilation tasks to JVM 17.
+            project.tasks.withType(JavaCompile).configureEach {
+              sourceCompatibility = JavaVersion.VERSION_17.toString()
+              targetCompatibility = JavaVersion.VERSION_17.toString()
+            }
+            project.plugins.withId('org.jetbrains.kotlin.android') {
+              project.tasks.configureEach { task ->
                 if (task.class.name.contains('KotlinCompile') && task.hasProperty('kotlinOptions')) {
                   task.kotlinOptions.jvmTarget = '17'
                 }
