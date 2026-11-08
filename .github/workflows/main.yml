@@ -48,13 +48,29 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Align Java and Kotlin JVM targets
+        run: |
+          cat > "$RUNNER_TEMP/jvm-target.gradle" <<'EOF'
+          allprojects {
+            tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
+              sourceCompatibility = '17'
+              targetCompatibility = '17'
+            }
+            tasks.configureEach { task ->
+              if (task.class.name.contains('KotlinCompile') && task.hasProperty('kotlinOptions')) {
+                task.kotlinOptions.jvmTarget = '17'
+              }
+            }
+          }
+          EOF
+
       - name: Build APK
         run: |
           if [ -f "$PROJECT_DIR/gradlew" ]; then
             chmod +x "$PROJECT_DIR/gradlew"
-            "$PROJECT_DIR/gradlew" -p "$PROJECT_DIR" :app:assembleDebug
+            "$PROJECT_DIR/gradlew" -I "$RUNNER_TEMP/jvm-target.gradle" -p "$PROJECT_DIR" :app:assembleDebug
           else
-            gradle -p "$PROJECT_DIR" :app:assembleDebug
+            gradle -I "$RUNNER_TEMP/jvm-target.gradle" -p "$PROJECT_DIR" :app:assembleDebug
           fi
 
       - name: Upload APK
