@@ -43,6 +43,26 @@ jobs:
           PROJECT_DIR=$(dirname "$PROJECT_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
+      - name: Package extracted Android source for review
+        if: always()
+        run: |
+          if [ -d source ]; then
+            find source -type f | sort > alphaai-source-manifest.txt
+            zip -qr alphaai-source-review.zip source
+          else
+            echo "Source extraction directory missing" > alphaai-source-manifest.txt
+          fi
+
+      - name: Upload Android source for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AlphaAI-Android-Source-Review
+          path: |
+            alphaai-source-review.zip
+            alphaai-source-manifest.txt
+          if-no-files-found: warn
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
