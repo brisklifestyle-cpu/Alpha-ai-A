@@ -51,14 +51,29 @@ jobs:
       - name: Align Java and Kotlin JVM targets
         run: |
           cat > "$RUNNER_TEMP/jvm-target.gradle" <<'EOF'
-          allprojects {
-            tasks.withType(org.gradle.api.tasks.compile.JavaCompile).configureEach {
-              sourceCompatibility = '17'
-              targetCompatibility = '17'
-            }
-            tasks.configureEach { task ->
-              if (task.class.name.contains('KotlinCompile') && task.hasProperty('kotlinOptions')) {
-                task.kotlinOptions.jvmTarget = '17'
+          import org.gradle.api.tasks.compile.JavaCompile
+          import org.gradle.api.JavaVersion
+
+          // Apply after Android Gradle Plugin has configured its compile tasks.
+          gradle.projectsEvaluated {
+            allprojects {
+              def androidExtension = extensions.findByName('android')
+              if (androidExtension != null) {
+                androidExtension.compileOptions.sourceCompatibility = JavaVersion.VERSION_17
+                androidExtension.compileOptions.targetCompatibility = JavaVersion.VERSION_17
+              }
+
+              // Force every Java compile task to emit Java 17 bytecode.
+              tasks.withType(JavaCompile).all {
+                sourceCompatibility = JavaVersion.VERSION_17.toString()
+                targetCompatibility = JavaVersion.VERSION_17.toString()
+              }
+
+              // Keep Kotlin compile tasks on the same JVM target.
+              tasks.configureEach { task ->
+                if (task.class.name.contains('KotlinCompile') && task.hasProperty('kotlinOptions')) {
+                  task.kotlinOptions.jvmTarget = '17'
+                }
               }
             }
           }
