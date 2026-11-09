@@ -56,6 +56,7 @@ fun PhoneCloneScreen() {
     var status by remember { mutableStateOf("ফাইল বেছে নিন, একটি শক্তিশালী পাসফ্রেজ দিন, তারপর encrypted backup তৈরি করুন।") }
     var restoreSource by remember { mutableStateOf<Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var dualBackupPending by remember { mutableStateOf(false) }
     var history by remember { mutableStateOf(loadCloneHistory(context)) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -76,9 +77,27 @@ fun PhoneCloneScreen() {
                 val result = runCatching { writeEncryptedBackup(context, target, selectedFiles.toList(), passphrase, includeContacts) }
                 Handler(Looper.getMainLooper()).post {
                     busy = false
-                    status = result.fold({ appendCloneHistory(context, target); history = loadCloneHistory(context); "Backup সফল হয়েছে। ফাইলটি নির্বাচিত লোকাল বা Cloud location-এ সেভ হয়েছে।" }, { "Backup ব্যর্থ: ${it.localizedMessage ?: "অজানা সমস্যা"}" })
+                    status = result.fold({ appendCloneHistory(context, target); history = loadCloneHistory(context); if (dualBackupPending) "প্রথম encrypted copy সেভ হয়েছে। এবার দ্বিতীয় storage location বেছে নিন।" else "Backup সফল হয়েছে। ফাইলটি নির্বাচিত লোকাল বা Cloud location-এ সেভ হয়েছে।" }, { dualBackupPending = false; "Backup ব্যর্থ: ${it.localizedMessage ?: "অজানা সমস্যা"}" })
+                    if (result.isSuccess && dualBackupPending) dualBackupPending = true
                 }
             }.start()
+        }
+    }
+    val secondBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { target ->
+        if (target != null) {
+            busy = true
+            status = "দ্বিতীয় encrypted copy তৈরি হচ্ছে…"
+            Thread {
+                val result = runCatching { writeEncryptedBackup(context, target, selectedFiles.toList(), passphrase, includeContacts) }
+                Handler(Looper.getMainLooper()).post {
+                    busy = false
+                    status = result.fold({ appendCloneHistory(context, target); history = loadCloneHistory(context); "Dual Backup সম্পন্ন: দুটি আলাদা storage location-এ encrypted copy সেভ হয়েছে।" }, { "দ্বিতীয় copy ব্যর্থ: ${it.localizedMessage ?: "অজানা সমস্যা"}" })
+                    dualBackupPending = false
+                }
+            }.start()
+        } else {
+            dualBackupPending = false
+            status = "দ্বিতীয় copy বাতিল করা হয়েছে। প্রথম backup-টি সেভ আছে।"
         }
     }
     val archivePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { source ->
@@ -141,7 +160,8 @@ fun PhoneCloneScreen() {
                     onClick = { createBackup.launch("AlphaAI-PhoneClone.aiclon") },
                     enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts)
                 ) { Text("Local + Cloud Dual Backup") }
-                Text("Dual Backup-এ প্রথমে লোকাল destination বেছে নিন, তারপর দ্বিতীয় picker-এ Google Drive বা অন্য cloud destination নির্বাচন করুন। একই encrypted archive দুই জায়গায় কপি হবে।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                Text("Dual Backup-এ প্রথমে একটি destination-এ encrypted backup সেভ হবে। এরপর নিচের বোতাম দিয়ে Google Drive বা অন্য storage provider-এ দ্বিতীয় encrypted copy সেভ করুন।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                if (dualBackupPending) Button(onClick = { secondBackup.launch("AlphaAI-PhoneClone-Cloud.aiclon") }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = CloneRed)) { Text("দ্বিতীয় লোকেশন বেছে নিন") }
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = ClonePanel)) {
