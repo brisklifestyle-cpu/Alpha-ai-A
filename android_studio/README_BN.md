@@ -32,3 +32,11 @@ Voice স্ক্রিনে মাইক্রোফোন দিয়ে ব�
 
 ## সীমাবদ্ধতা
 এই Phase 1-এ TV remote control, Truecaller, cloud backup, social media account automation, always-on wake word এবং পূর্ণ offline LLM নেই। Offline Helper কেবল সাধারণ স্থানীয় নির্দেশনা দেয়। পরবর্তী Phase-এ প্রতিটি integration আলাদা করে যোগ ও বাস্তব ডিভাইসে পরীক্ষা করতে হবে।
+
+
+## ইন-অ্যাপ Sound Control
+
+- নতুন **Sound** ট্যাব থেকে ফোনের Media volume স্লাইডার দিয়ে বাড়ানো-কমানো যায়।
+- একই স্ক্রিনে Mute, Unmute এবং এক ধাপ করে volume control আছে।
+- এটি Android-এর `STREAM_MUSIC` নিয়ন্ত্রণ করে; TV-তে যুক্ত UE BOOM 3 বা অন্য স্পিকারের ভলিউম সরাসরি নিয়ন্ত্রণ করে না।
+- Bluetooth স্পিকার ফোনে যুক্ত থাকলে Android-এর অডিও রাউটিং অনুযায়ী ভলিউম প্রভাবিত হতে পারে।
