@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -292,69 +296,110 @@ private fun DashboardHome(hasApiKey: Boolean, onNavigate: (String) -> Unit) {
         DashboardTile("Connect Center", "Devices & Services", Icons.Default.Link, "Devices")
     )
     val neon = listOf(
-        Color(0xFF13B9FF), Color(0xFFE52BFF), Color(0xFFFF3030), Color(0xFF8DFF32),
-        Color(0xFFB45CFF), Color(0xFF00E5C0), Color(0xFFFFB52E), Color(0xFF26C6DA)
+        Color(0xFF16C8FF), Color(0xFFE52BFF), Color(0xFFFF3030), Color(0xFF9BFF32),
+        Color(0xFFB45CFF), Color(0xFF00D8C8), Color(0xFFFFB52E), Color(0xFF26C6DA)
     )
-    LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 12.dp),
-        contentPadding = PaddingValues(top = 14.dp, bottom = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item {
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Icon(Icons.Default.ChangeHistory, null, tint = Red, modifier = Modifier.size(64.dp))
-                Text("Alpha AI", color = White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
-                Text("Devil Breath", color = Red, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                Text("YOUR SMART AI CONTROL CENTER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
-                Text(if (hasApiKey) "● ONLINE READY" else "● OFFLINE HELPER READY", color = Color(0xFF00E676), fontSize = 10.sp)
-            }
-        }
-        item {
-            Surface(
-                onClick = { onNavigate("Voice") },
-                color = Color(0xFF17090C),
-                shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF7D1722)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    Icon(Icons.Default.GraphicEq, null, tint = Red, modifier = Modifier.size(36.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Hey Devil", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Tap to Speak • Voice Assistant", color = Muted, fontSize = 11.sp)
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Icon(Icons.Default.Mic, null, tint = Red, modifier = Modifier.size(27.dp))
+    Box(Modifier.fillMaxSize()) {
+        EarthSpaceBackdrop()
+        LazyColumn(
+            Modifier.fillMaxSize().padding(horizontal = 12.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Icon(Icons.Default.ChangeHistory, null, tint = Red, modifier = Modifier.size(62.dp))
+                    Text("Alpha AI", color = White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("Devil Breath", color = Red, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    Text("YOUR SMART AI CONTROL CENTER", color = White.copy(alpha = 0.78f), fontSize = 9.sp, letterSpacing = 1.3.sp)
                 }
             }
-        }
-        item {
-            Text("SMART CONTROL MODULES", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-        }
-        items(tiles.chunked(4)) { group ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                group.forEachIndexed { index, tile ->
-                    val tint = neon[(tiles.indexOf(tile)).coerceIn(0, neon.lastIndex)]
-                    Surface(
-                        onClick = { onNavigate(tile.destination) },
-                        modifier = Modifier.weight(1f).height(105.dp),
-                        color = Color(0xFF090B10),
-                        shape = RoundedCornerShape(15.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.42f))
-                    ) {
-                        Column(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Icon(tile.icon, null, tint = tint, modifier = Modifier.size(27.dp))
-                            Text(tile.title, color = White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 11.sp)
+            item {
+                Surface(
+                    onClick = { onNavigate("Voice") },
+                    color = Color(0xD9090508),
+                    shape = RoundedCornerShape(28.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF9E1725)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Icon(Icons.Default.GraphicEq, null, tint = Red, modifier = Modifier.size(36.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Hey Devil", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("Tap to Speak", color = White.copy(alpha = 0.72f), fontSize = 11.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text(if (hasApiKey) "ONLINE" else "READY", color = Color(0xFF00E676), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            item { Text("SMART CONTROL MODULES", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp) }
+            items(tiles.chunked(4)) { group ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    group.forEach { tile ->
+                        val tint = neon[tiles.indexOf(tile).coerceIn(0, neon.lastIndex)]
+                        Surface(
+                            onClick = { onNavigate(tile.destination) },
+                            modifier = Modifier.weight(1f).height(104.dp),
+                            color = Color(0xD9090A10),
+                            shape = RoundedCornerShape(15.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.62f))
+                        ) {
+                            Column(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                Icon(tile.icon, null, tint = tint, modifier = Modifier.size(29.dp))
+                                Text(tile.title, color = White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 11.sp)
+                            }
                         }
                     }
                 }
-                repeat((4 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
 }
 
+@Composable
+private fun EarthSpaceBackdrop() {
+    Canvas(Modifier.fillMaxSize()) {
+        drawRect(Color.Black)
+        val center = Offset(size.width * 0.5f, size.height * 1.18f)
+        val radius = size.width * 0.82f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF281017), Color(0xFF10090D), Color(0xFF030305)),
+                center = Offset(center.x, center.y - radius * 0.68f),
+                radius = radius * 1.65f
+            ),
+            radius = radius,
+            center = center
+        )
+        drawCircle(
+            color = Color(0xFF6F101D).copy(alpha = 0.55f),
+            radius = radius,
+            center = center,
+            style = Stroke(width = 7f)
+        )
+        drawCircle(
+            color = Color(0xFFFF2638).copy(alpha = 0.75f),
+            radius = radius * 0.985f,
+            center = center,
+            style = Stroke(width = 2.5f)
+        )
+        drawCircle(
+            color = Color(0xFFFF2638).copy(alpha = 0.16f),
+            radius = radius * 1.035f,
+            center = center,
+            style = Stroke(width = 13f)
+        )
+        val stars = listOf(
+            Offset(size.width*.10f,size.height*.14f), Offset(size.width*.82f,size.height*.11f),
+            Offset(size.width*.24f,size.height*.42f), Offset(size.width*.91f,size.height*.49f),
+            Offset(size.width*.72f,size.height*.32f), Offset(size.width*.06f,size.height*.63f),
+            Offset(size.width*.91f,size.height*.72f), Offset(size.width*.48f,size.height*.20f)
+        )
+        stars.forEach { drawCircle(Color(0xFFFF6673).copy(alpha=.55f), radius=1.5f, center=it) }
+    }
+}
 @Composable
 private fun DashboardDevices(onNavigate: (String) -> Unit) {
     val devices = listOf(
