@@ -89,3 +89,14 @@ Voice স্ক্রিনে ম্যানুয়াল মাইক্রো
 - **Saved Drafts** তালিকায় সংরক্ষিত খসড়াগুলো দেখা যায়; **খুলুন** চাপলে caption Composer-এ ফিরে আসে।
 - প্রতিটি খসড়া আলাদাভাবে Delete করা যায়।
 - খসড়াগুলো Android app-এর স্থানীয় SharedPreferences-এ JSON আকারে থাকে; cloud backup বা social platform-এ auto-publish হয় না।
+
+
+## Phone Clone — encrypted backup & restore (প্রাথমিক সংস্করণ)
+
+- **Clone** ট্যাব থেকে Android file picker দিয়ে ছবি, ভিডিও, ডকুমেন্টসহ নির্বাচিত ফাইল ব্যাকআপ করা যায়।
+- ব্যবহারকারী চাইলে Contacts permission দিয়ে ফোন নম্বরসহ Contacts JSON-ও ব্যাকআপে যোগ করতে পারেন।
+- `.aiclon` archive-এ AES-256-GCM encryption এবং PBKDF2-HMAC-SHA256 key derivation ব্যবহৃত হয়। Backup তৈরি ও Restore—দুই ক্ষেত্রেই একই passphrase প্রয়োজন; passphrase ভুলে গেলে archive পুনরুদ্ধার করা যাবে না।
+- Android-এর **Create Document** picker-এ Google Drive বা অন্য cloud provider উপলভ্য থাকলে সেখানে archive সংরক্ষণ করা যায়; ফোনের লোকাল storage-ও নির্বাচন করা যায়।
+- Restore-এর সময় archive নির্বাচন করে destination folder দিতে হয়। নির্বাচিত ফাইল ও Contacts JSON সেখানে লেখা হয়; Contacts JSON-কে Contacts app-এ import আলাদাভাবে করতে হবে।
+- এই প্রথম সংস্করণে SMS, Call Log, Calendar, installed-app private data, system settings, auto-backup, cloud sync বা backup history নেই। Android-এর সীমাবদ্ধতার কারণে সব অ্যাপের private data বা সম্পূর্ণ OS হুবহু clone করা যায় না।
+- বড় archive তৈরি/restore করার আগে পর্যাপ্ত storage নিশ্চিত করুন। Restore করলে destination-এ একই নামের ফাইল থাকলে নতুন ফাইল তৈরি করার চেষ্টা হতে পারে; প্রয়োজনীয় জায়গা আগে যাচাই করুন।
