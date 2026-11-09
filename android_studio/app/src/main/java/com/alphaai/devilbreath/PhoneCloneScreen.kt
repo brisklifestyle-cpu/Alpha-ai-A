@@ -57,7 +57,6 @@ fun PhoneCloneScreen() {
     var restoreSource by remember { mutableStateOf<Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
     var history by remember { mutableStateOf(loadCloneHistory(context)) }
-    var dualMode by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         selectedFiles.clear()
@@ -134,12 +133,12 @@ fun PhoneCloneScreen() {
                 )
                 Text("AES-256-GCM encryption ও PBKDF2 key derivation ব্যবহার করা হয়। Restore-এর সময় একই passphrase লাগবে। এটি ভুলে গেলে backup খোলা যাবে না।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                 Button(
-                    onClick = { dualMode = false; createBackup.launch("AlphaAI-PhoneClone.aiclon") },
+                    onClick = { createBackup.launch("AlphaAI-PhoneClone.aiclon") },
                     enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts),
                     colors = ButtonDefaults.buttonColors(containerColor = CloneRed)
                 ) { Text("এক জায়গায় Backup") }
                 OutlinedButton(
-                    onClick = { dualMode = true; createBackup.launch("AlphaAI-Local-PhoneClone.aiclon") },
+                    onClick = { createBackup.launch("AlphaAI-PhoneClone.aiclon") },
                     enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts)
                 ) { Text("Local + Cloud Dual Backup") }
                 Text("Dual Backup-এ প্রথমে লোকাল destination বেছে নিন, তারপর দ্বিতীয় picker-এ Google Drive বা অন্য cloud destination নির্বাচন করুন। একই encrypted archive দুই জায়গায় কপি হবে।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
