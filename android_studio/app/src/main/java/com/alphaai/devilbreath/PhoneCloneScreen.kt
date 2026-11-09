@@ -56,6 +56,7 @@ fun PhoneCloneScreen() {
     var status by remember { mutableStateOf("ফাইল বেছে নিন, একটি শক্তিশালী পাসফ্রেজ দিন, তারপর encrypted backup তৈরি করুন।") }
     var restoreSource by remember { mutableStateOf<Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var history by remember { mutableStateOf(loadCloneHistory(context)) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         selectedFiles.clear()
@@ -75,7 +76,7 @@ fun PhoneCloneScreen() {
                 val result = runCatching { writeEncryptedBackup(context, target, selectedFiles.toList(), passphrase, includeContacts) }
                 Handler(Looper.getMainLooper()).post {
                     busy = false
-                    status = result.fold({ "Backup সফল হয়েছে। ফাইলটি নির্বাচিত লোকাল বা Cloud location-এ সেভ হয়েছে।" }, { "Backup ব্যর্থ: ${it.localizedMessage ?: "অজানা সমস্যা"}" })
+                    status = result.fold({ appendCloneHistory(context, target); history = loadCloneHistory(context); "Backup সফল হয়েছে। ফাইলটি নির্বাচিত লোকাল বা Cloud location-এ সেভ হয়েছে।" }, { "Backup ব্যর্থ: ${it.localizedMessage ?: "অজানা সমস্যা"}" })
                 }
             }.start()
         }
@@ -147,7 +148,23 @@ fun PhoneCloneScreen() {
         }
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = CloneRed)
         Text(status, color = Color(0xFFBDBDBD), style = MaterialTheme.typography.bodySmall)
-        Text("Cloud: Create Document picker-এ Google Drive বা অন্য সংযুক্ত provider দেখা গেলে সেখানে backup সেভ করা যাবে। এই সংস্করণে auto cloud sync নেই।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+        Card(colors = CardDefaults.cardColors(containerColor = ClonePanel)) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("৪ • Backup History", color = Color.White, fontWeight = FontWeight.SemiBold)
+                if (history.isEmpty()) {
+                    Text("এখনও কোনো সফল backup নেই।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    history.takeLast(10).asReversed().forEach { item ->
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(item.optString("name", "AlphaAI backup"), color = Color.White)
+                            Text(item.optString("date", "") + " • " + item.optString("destination", "Saved location"), color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                        }
+                        HorizontalDivider(color = Color.DarkGray)
+                    }
+                }
+            }
+        }
+        Text("Cloud: Create Document picker-এ Google Drive বা অন্য সংযুক্ত provider দেখা গেলে সেখানে backup সেভ করা যাবে। Auto backup ও একসঙ্গে local+cloud sync পরবর্তী ধাপে নিরাপদ credential storage-সহ যোগ হবে।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -235,4 +252,25 @@ private fun queryDisplayName(context: Context, uri: Uri): String {
         if (cursor.moveToFirst()) name = cursor.getString(0) ?: name
     }
     return name
+}
+
+private fun loadCloneHistory(context: Context): List<JSONObject> {
+    val raw = context.getSharedPreferences("phone_clone_history", Context.MODE_PRIVATE)
+        .getString("items", "[]") ?: "[]"
+    val array = runCatching { JSONArray(raw) }.getOrElse { JSONArray() }
+    return (0 until array.length()).mapNotNull { index -> array.optJSONObject(index) }
+}
+
+private fun appendCloneHistory(context: Context, target: Uri) {
+    val existing = loadCloneHistory(context)
+    val name = runCatching { queryDisplayName(context, target) }.getOrDefault("AlphaAI-PhoneClone.aiclon")
+    val destination = target.authority ?: "Selected storage"
+    val item = JSONObject()
+        .put("name", name)
+        .put("date", java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date()))
+        .put("destination", destination)
+    val array = JSONArray()
+    (existing + item).takeLast(30).forEach { array.put(it) }
+    context.getSharedPreferences("phone_clone_history", Context.MODE_PRIVATE)
+        .edit().putString("items", array.toString()).apply()
 }
