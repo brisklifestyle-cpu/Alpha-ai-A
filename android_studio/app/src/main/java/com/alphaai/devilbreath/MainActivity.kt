@@ -106,9 +106,22 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
     var online by remember { mutableStateOf(true) }
     val chat = remember { mutableStateListOf(ChatLine(false, "স্বাগতম! আমি Alpha AI। Gemini API Key দিলে অনলাইন AI ব্যবহার করতে পারবেন; না দিলে Offline Helper চালু থাকবে।")) }
     val context = LocalContext.current
+    var voiceStatus by remember { mutableStateOf("মাইক্রোফোন চাপুন, তারপর “Hey Devil” বা “হেই ডেভিল” বলে নির্দেশ দিন।") }
     val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (!spoken.isNullOrBlank()) prompt = spoken
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
+        if (!spoken.isNullOrBlank()) {
+            val wakePattern = Regex("(?i)^\\s*(hey\\s+devil|হেই\\s+ডেভিল)[,\\s।!]*")
+            val command = spoken.replaceFirst(wakePattern, "").trim()
+            if (command.isBlank() && wakePattern.containsMatchIn(spoken)) {
+                prompt = ""
+                voiceStatus = "হ্যাঁ, বলুন… এবার আপনার নির্দেশটি বলুন।"
+            } else {
+                prompt = command.ifBlank { spoken }
+                voiceStatus = if (command != spoken) "Wake phrase শনাক্ত হয়েছে। নির্দেশটি পাঠানোর জন্য Send চাপুন।" else "কথা শনাক্ত হয়েছে। পাঠানোর জন্য Send চাপুন।"
+            }
+        } else {
+            voiceStatus = "কোনো কথা শনাক্ত হয়নি। আবার মাইক্রোফোন চাপুন।"
+        }
     }
     MaterialTheme(colorScheme = darkColorScheme(primary = Red, background = Bg, surface = Panel, onSurface = White)) {
         Scaffold(containerColor = Bg, bottomBar = {
@@ -140,6 +153,7 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                 "Social" -> SocialMediaManagerScreen()
                 "AI Chat", "Voice" -> Column(Modifier.fillMaxSize().padding(padding).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (page == "Voice") "HEY DEVIL • VOICE" else "ALPHA AI CHAT", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    if (page == "Voice") Text(voiceStatus, color = Muted, fontSize = 12.sp)
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(chat) { line ->
                             Surface(color = if (line.fromUser) Color(0xFF351116) else Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
@@ -153,7 +167,7 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-BD")
-                                putExtra(RecognizerIntent.EXTRA_PROMPT, "বলুন...")
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, "হেই ডেভিল বলুন, তারপর আপনার নির্দেশ দিন...")
                             }
                             runCatching { voiceLauncher.launch(intent) }
                         }) { Icon(Icons.Default.Mic, "Voice", tint = Red) }
