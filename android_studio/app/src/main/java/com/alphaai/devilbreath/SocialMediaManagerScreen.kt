@@ -63,6 +63,12 @@ fun SocialMediaManagerScreen() {
                 Text(note, color = Color(0xFFAAAAAA), style = MaterialTheme.typography.bodySmall)
             }
         }
+        OutlinedButton(
+            onClick = {
+                runCatching { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Usage access settings • Screen-time control") }
         Text("SOCIAL APPS", color = Color(0xFFE32636), fontWeight = FontWeight.Bold)
         apps.forEach { app ->
             val installed = remember { context.packageManager.getLaunchIntentForPackage(app.packageName) != null }
@@ -88,7 +94,7 @@ fun SocialMediaManagerScreen() {
             }
         }
         Text(
-            "এই স্ক্রিন থেকে অ্যাপ খোলা, পোস্টের লেখা তৈরি/শেয়ার এবং Android-এর App info খোলা যায়। App info-তে প্রতিটি অ্যাপের permission, storage ও notification সেটিংস আপনি নিজে পরিবর্তন করবেন। Alpha AI গোপনে অ্যাকাউন্টে প্রবেশ, পোস্ট প্রকাশ, ইনবক্স পড়া বা অন্য অ্যাপ uninstall করে না। সরাসরি account publishing/API automation-এর জন্য সংশ্লিষ্ট প্ল্যাটফর্মের অনুমোদিত API ও OAuth access আলাদাভাবে লাগবে।",
+            "এই স্ক্রিন থেকে অ্যাপ খোলা, পোস্টের লেখা তৈরি/শেয়ার এবং Android-এর App info খোলা যায়। App info-তে প্রতিটি অ্যাপের permission, storage, notification এবং uninstall অপশন আপনি নিজে পরিচালনা করবেন। Usage access settings থেকে screen-time access আলাদাভাবে অনুমোদন করতে পারবেন। Alpha AI গোপনে অ্যাকাউন্টে প্রবেশ, পোস্ট প্রকাশ, ইনবক্স পড়া বা অন্য অ্যাপ uninstall করে না। সরাসরি account publishing/API automation-এর জন্য সংশ্লিষ্ট প্ল্যাটফর্মের অনুমোদিত API ও OAuth access আলাদাভাবে লাগবে।",
             color = Color(0xFFAAAAAA), style = MaterialTheme.typography.bodySmall
         )
     }
