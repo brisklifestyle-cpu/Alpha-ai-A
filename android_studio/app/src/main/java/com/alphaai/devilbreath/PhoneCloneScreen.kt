@@ -160,8 +160,11 @@ fun PhoneCloneScreen() {
                     colors = ButtonDefaults.buttonColors(containerColor = CloneRed)
                 ) { Text("এক জায়গায় Backup") }
                 OutlinedButton(
-                    onClick = { createBackup.launch("AlphaAI-PhoneClone.aiclon") },
-                    enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts)
+                    onClick = {
+                        dualBackupPending = true
+                        createBackup.launch("AlphaAI-PhoneClone-Local.aiclon")
+                    },
+                    enabled = !busy && !dualBackupPending && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts)
                 ) { Text("Local + Cloud Dual Backup") }
                 Text("Dual Backup-এ প্রথমে একটি destination-এ encrypted backup সেভ হবে। এরপর নিচের বোতাম দিয়ে Google Drive বা অন্য storage provider-এ দ্বিতীয় encrypted copy সেভ করুন।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                 if (dualBackupPending) Button(onClick = { secondBackup.launch("AlphaAI-PhoneClone-Cloud.aiclon") }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = CloneRed)) { Text("দ্বিতীয় লোকেশন বেছে নিন") }
