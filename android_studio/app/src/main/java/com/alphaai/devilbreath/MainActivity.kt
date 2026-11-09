@@ -1,0 +1,194 @@
+package com.alphaai.devilbreath
+
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
+import org.json.JSONArray
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
+import java.util.concurrent.Executors
+
+private val Bg = Color(0xFF080808)
+private val Panel = Color(0xFF171717)
+private val Red = Color(0xFFE32636)
+private val White = Color(0xFFF5F5F5)
+private val Muted = Color(0xFF9A9A9A)
+
+class MainActivity : ComponentActivity() {
+    private val executor = Executors.newSingleThreadExecutor()
+    private var tts: TextToSpeech? = null
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        tts = TextToSpeech(this) { status -> if (status == TextToSpeech.SUCCESS) tts?.language = Locale("bn", "BD") }
+        setContent { AlphaApp(
+            readKey = { securePrefs().getString("gemini_key", "") ?: "" },
+            saveKey = { securePrefs().edit().putString("gemini_key", it.trim()).apply() },
+            askAI = { key, prompt, done -> executor.execute { val answer = GeminiClient.ask(key, prompt); runOnUiThread { done(answer) } } },
+            speak = { tts?.speak(it, TextToSpeech.QUEUE_FLUSH, null, "alpha_reply") }
+        ) }
+    }
+    private fun securePrefs() = EncryptedSharedPreferences.create(
+        this, "alpha_secure_prefs",
+        MasterKey.Builder(this).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+    override fun onDestroy() { tts?.stop(); tts?.shutdown(); executor.shutdown(); super.onDestroy() }
+}
+
+private object GeminiClient {
+    fun ask(apiKey: String, prompt: String): String {
+        if (apiKey.isBlank()) return "API Key দেওয়া নেই। Settings-এ Gemini API Key যোগ করুন, অথবা Offline Helper ব্যবহার করুন।"
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey")
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"; connectTimeout = 20000; readTimeout = 30000
+                setRequestProperty("Content-Type", "application/json")
+                doOutput = true
+            }
+            val body = JSONObject().put("contents", JSONArray().put(JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))))
+            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val raw = stream.bufferedReader().use { it.readText() }
+            if (code !in 200..299) {
+                val message = runCatching { JSONObject(raw).getJSONObject("error").getString("message") }.getOrDefault("HTTP $code")
+                "Gemini API সমস্যা ($code): $message"
+            } else {
+                val obj = JSONObject(raw)
+                obj.getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts").getJSONObject(0).getString("text")
+            }
+        } catch (e: Exception) {
+            "সংযোগ করা যায়নি: ${e.localizedMessage ?: "অজানা সমস্যা"}"
+        } finally { connection?.disconnect() }
+    }
+}
+
+private data class ChatLine(val fromUser: Boolean, val text: String)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (String, String, (String) -> Unit) -> Unit, speak: (String) -> Unit) {
+    var page by remember { mutableStateOf("Home") }
+    var apiKey by remember { mutableStateOf(readKey()) }
+    var draftKey by remember { mutableStateOf(apiKey) }
+    var prompt by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var online by remember { mutableStateOf(true) }
+    val chat = remember { mutableStateListOf(ChatLine(false, "স্বাগতম! আমি Alpha AI। Gemini API Key দিলে অনলাইন AI ব্যবহার করতে পারবেন; না দিলে Offline Helper চালু থাকবে।")) }
+    val context = LocalContext.current
+    val voiceLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!spoken.isNullOrBlank()) prompt = spoken
+    }
+    MaterialTheme(colorScheme = darkColorScheme(primary = Red, background = Bg, surface = Panel, onSurface = White)) {
+        Scaffold(containerColor = Bg, bottomBar = {
+            NavigationBar(containerColor = Color(0xFF101010)) {
+                listOf("Home" to Icons.Default.Home, "AI Chat" to Icons.Default.Chat, "Voice" to Icons.Default.Mic, "Settings" to Icons.Default.Settings).forEach { (name, icon) ->
+                    NavigationBarItem(selected = page == name, onClick = { page = name }, icon = { Icon(icon, null) }, label = { Text(name, fontSize = 10.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Red, selectedTextColor = Red, indicatorColor = Color(0xFF351116), unselectedIconColor = Muted, unselectedTextColor = Muted))
+                }
+            }
+        }) { padding ->
+            when (page) {
+                "Home" -> Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("ALPHA AI", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+                    Text("DEVIL BREATH", color = Red, fontSize = 12.sp, letterSpacing = 2.sp)
+                    Surface(color = Color(0xFF1A0B0D), shape = RoundedCornerShape(22.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("HELLO, DEVIL", color = Red, fontWeight = FontWeight.Bold)
+                            Text("আপনার ব্যক্তিগত AI কমান্ড সেন্টার", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text(if (apiKey.isBlank()) "Offline Helper সক্রিয় • Gemini Key যোগ করা হয়নি" else "Gemini API Key সংরক্ষিত", color = Muted)
+                            Button(onClick = { page = "AI Chat" }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Icon(Icons.Default.Chat, null); Spacer(Modifier.width(8.dp)); Text("AI CHAT শুরু করুন") }
+                        }
+                    }
+                    Text("PHASE 1", color = Red, fontWeight = FontWeight.Bold)
+                    listOf("Gemini AI Chat" to "ফ্রি tier quota সাপেক্ষ", "Voice input & spoken reply" to "ডিভাইসের speech service নির্ভর", "Offline Helper" to "সীমিত স্থানীয় সহায়তা").forEach {
+                        Surface(color = Panel, shape = RoundedCornerShape(14.dp)) { Column(Modifier.padding(16.dp)) { Text(it.first, color = White, fontWeight = FontWeight.SemiBold); Text(it.second, color = Muted, fontSize = 12.sp) } }
+                    }
+                }
+                "AI Chat", "Voice" -> Column(Modifier.fillMaxSize().padding(padding).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(if (page == "Voice") "HEY DEVIL • VOICE" else "ALPHA AI CHAT", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(chat) { line ->
+                            Surface(color = if (line.fromUser) Color(0xFF351116) else Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                                Text(line.text, color = White, modifier = Modifier.padding(14.dp))
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(prompt, { prompt = it }, modifier = Modifier.weight(1f), placeholder = { Text("বাংলায় লিখুন...") }, maxLines = 3)
+                        IconButton(onClick = {
+                            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-BD")
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, "বলুন...")
+                            }
+                            runCatching { voiceLauncher.launch(intent) }
+                        }) { Icon(Icons.Default.Mic, "Voice", tint = Red) }
+                        IconButton(enabled = prompt.isNotBlank() && !busy, onClick = {
+                            val q = prompt.trim(); prompt = ""; chat.add(ChatLine(true, q)); busy = true
+                            if (online && apiKey.isNotBlank()) askAI(apiKey, q) { answer -> chat.add(ChatLine(false, answer)); busy = false; speak(answer) }
+                            else { val answer = offlineAnswer(q); chat.add(ChatLine(false, answer)); busy = false; speak(answer) }
+                        }) { Icon(Icons.Default.Send, "Send", tint = if (busy) Muted else Red) }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("AI Mode", color = Muted)
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(selected = online, onClick = { online = true }, label = { Text("Gemini Online") })
+                        Spacer(Modifier.width(6.dp))
+                        FilterChip(selected = !online, onClick = { online = false }, label = { Text("Offline Helper") })
+                    }
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Red)
+                }
+                else -> Column(Modifier.fillMaxSize().padding(padding).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("SETTINGS", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                    Text("Gemini API Key", color = White, fontWeight = FontWeight.SemiBold)
+                    OutlinedTextField(draftKey, { draftKey = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), placeholder = { Text("Google AI Studio API Key") })
+                    Button(onClick = { apiKey = draftKey.trim(); saveKey(apiKey) }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Text("নিরাপদে সংরক্ষণ করুন") }
+                    Text(if (apiKey.isBlank()) "এখনো Key সংরক্ষণ করা হয়নি" else "Key সংরক্ষিত আছে (মান দেখানো হচ্ছে না)", color = Muted)
+                    Text("API Key এই GitHub repository-তে রাখা হয় না। ব্যক্তিগত পরীক্ষার APK-তে ব্যবহার করুন; বহু-ব্যবহারকারীর অ্যাপের জন্য backend proxy উত্তম।", color = Muted, fontSize = 12.sp)
+                    Text("Gemini free tier-এর সীমা Google নির্ধারণ করে।", color = Muted, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+private fun offlineAnswer(q: String): String {
+    val s = q.lowercase()
+    return when {
+        "সময়" in s || "time" in s -> "আমি অফলাইন মোডে বর্তমান সময় নির্ভুলভাবে পড়তে পারছি না।"
+        "হ্যালো" in s || "hello" in s || "হাই" in s -> "হ্যালো! আমি Alpha AI Offline Helper। কীভাবে সাহায্য করতে পারি?"
+        "সাহায্য" in s || "help" in s -> "অফলাইন মোডে সাধারণ শুভেচ্ছা ও অ্যাপ-সংক্রান্ত সীমিত সহায়তা দিতে পারি। পূর্ণ AI উত্তরের জন্য Gemini Online চালু করুন।"
+        else -> "এটি Offline Helper-এর সীমিত সংস্করণ। ইন্টারনেট চালু করে Gemini Online নির্বাচন করুন, অথবা Settings-এ API Key যোগ করুন।"
+    }
+}
