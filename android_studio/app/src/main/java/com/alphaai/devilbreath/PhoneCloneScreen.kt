@@ -81,6 +81,9 @@ fun PhoneCloneScreen() {
                     if (result.isSuccess && dualBackupPending) dualBackupPending = true
                 }
             }.start()
+        } else if (dualBackupPending) {
+            dualBackupPending = false
+            status = "প্রথম backup বাতিল করা হয়েছে; কোনো copy তৈরি হয়নি।"
         }
     }
     val secondBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { target ->
