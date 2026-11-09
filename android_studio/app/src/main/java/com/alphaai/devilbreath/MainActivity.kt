@@ -130,9 +130,9 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
             NavigationBar(containerColor = Color(0xFF101010)) {
                 listOf(
                     Triple("Home", Icons.Default.Home, "Home"),
-                    Triple("Assistant", Icons.Default.Chat, "AI Chat"),
                     Triple("Devices", Icons.Default.Tv, "Devices"),
-                    Triple("Settings", Icons.Default.Settings, "Settings")
+                    Triple("Tools", Icons.Default.Build, "Sound"),
+                    Triple("More", Icons.Default.MoreHoriz, "Settings")
                 ).forEach { (label, icon, destination) ->
                     NavigationBarItem(
                         selected = (if (page == "AI Chat" || page == "Voice") "Assistant" else page) == label,
