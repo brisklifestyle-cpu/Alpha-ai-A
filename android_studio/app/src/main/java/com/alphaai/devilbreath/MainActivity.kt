@@ -149,63 +149,8 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
             }
         }) { padding ->
             when (page) {
-                "Home" -> Column(
-                    Modifier.fillMaxSize().padding(padding).padding(horizontal = 18.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text("ALPHA AI", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-                    Text("DEVIL BREATH  •  COMMAND CENTER", color = Red, fontSize = 11.sp, letterSpacing = 1.5.sp)
-                    Surface(color = Color(0xFF1A0B0D), shape = RoundedCornerShape(22.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text("HELLO, DEVIL", color = Red, fontWeight = FontWeight.Bold)
-                            Text("আপনার ব্যক্তিগত AI কমান্ড সেন্টার", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                            Text(if (apiKey.isBlank()) "Offline Helper সক্রিয় • Gemini Key যোগ করা হয়নি" else "Gemini API Key সংরক্ষিত", color = Muted, fontSize = 12.sp)
-                            Button(onClick = { page = "AI Chat" }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
-                                Icon(Icons.Default.Chat, null); Spacer(Modifier.width(8.dp)); Text("AI CHAT শুরু করুন")
-                            }
-                        }
-                    }
-                    Text("QUICK ACCESS", color = White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                    val shortcuts = listOf(
-                        Triple("Voice Control", "Hey Devil • ভয়েস কমান্ড", Icons.Default.Mic) to "Voice",
-                        Triple("Social Manager", "সোশ্যাল অ্যাপ ও পোস্ট ড্রাফট", Icons.Default.Share) to "Social",
-                        Triple("Phone Clone", "Encrypted backup ও restore", Icons.Default.Security) to "Clone",
-                        Triple("Caller", "Truecaller integration", Icons.Default.Call) to "Caller",
-                        Triple("Contacts", "Contacts ও dialer", Icons.Default.Contacts) to "Contacts"
-                    )
-                    shortcuts.chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { (item, destination) ->
-                                Surface(
-                                    onClick = { page = destination },
-                                    modifier = Modifier.weight(1f).height(112.dp),
-                                    color = Panel, shape = RoundedCornerShape(18.dp)
-                                ) {
-                                    Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Icon(item.third, null, tint = Red, modifier = Modifier.size(25.dp))
-                                        Text(item.first, color = White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1)
-                                        Text(item.second, color = Muted, fontSize = 10.sp, maxLines = 2)
-                                    }
-                                }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
-                    }
-                }
-                "Devices" -> Column(Modifier.fillMaxSize().padding(padding).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("DEVICES", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontSize = 18.sp)
-                    Text("আপনার ডিভাইস ও অডিও কন্ট্রোল", color = White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    listOf(Triple("Sound Studio", "ফোনের মিডিয়া ভলিউম নিয়ন্ত্রণ", Icons.Default.VolumeUp) to "Sound",
-                           Triple("TV Control", "Android / Google TV সংযোগ", Icons.Default.Tv) to "TV").forEach { (item, destination) ->
-                        Surface(onClick = { page = destination }, color = Panel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                            Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                Icon(item.third, null, tint = Red, modifier = Modifier.size(30.dp))
-                                Column(Modifier.weight(1f)) { Text(item.first, color = White, fontWeight = FontWeight.SemiBold); Text(item.second, color = Muted, fontSize = 12.sp) }
-                                Icon(Icons.Default.ChevronRight, null, tint = Muted)
-                            }
-                        }
-                    }
-                }
+                "Home" -> DashboardHome(apiKey.isNotBlank()) { page = it }
+                "Devices" -> DashboardDevices { page = it }
                 "TV" -> TvControlScreen()
                 "Sound" -> SoundControlScreen()
                 "Social" -> SocialMediaManagerScreen()
@@ -328,5 +273,89 @@ private fun offlineAnswer(q: String): String {
         "হ্যালো" in s || "hello" in s || "হাই" in s -> "হ্যালো! আমি Alpha AI Offline Helper। কীভাবে সাহায্য করতে পারি?"
         "সাহায্য" in s || "help" in s -> "অফলাইন মোডে সাধারণ শুভেচ্ছা ও অ্যাপ-সংক্রান্ত সীমিত সহায়তা দিতে পারি। পূর্ণ AI উত্তরের জন্য Gemini Online চালু করুন।"
         else -> "এটি Offline Helper-এর সীমিত সংস্করণ। ইন্টারনেট চালু করে Gemini Online নির্বাচন করুন, অথবা Settings-এ API Key যোগ করুন।"
+    }
+}
+
+
+private data class DashboardTile(val title: String, val subtitle: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val destination: String)
+
+@Composable
+private fun DashboardHome(hasApiKey: Boolean, onNavigate: (String) -> Unit) {
+    val tiles = listOf(
+        DashboardTile("Voice Assistant", "Hey Devil • বাংলা ও English", Icons.Default.Mic, "Voice"),
+        DashboardTile("AI Chat", "Gemini ও Offline Helper", Icons.Default.Chat, "AI Chat"),
+        DashboardTile("TV Control", "Hisense VIDAA ও ONN Box", Icons.Default.Tv, "TV"),
+        DashboardTile("Sound Studio", "Alpha International Sound Engine", Icons.Default.VolumeUp, "Sound"),
+        DashboardTile("Phone Manager", "Contacts ও Dialer", Icons.Default.PhoneAndroid, "Contacts"),
+        DashboardTile("Phone Clone", "Encrypted backup ও restore", Icons.Default.Security, "Clone"),
+        DashboardTile("Social Manager", "Apps ও saved post drafts", Icons.Default.Share, "Social"),
+        DashboardTile("Caller ID", "Truecaller app integration", Icons.Default.Call, "Caller")
+    )
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text("ALPHA AI", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+            Text("DEVIL BREATH • COMMAND CENTER", color = Red, fontSize = 11.sp, letterSpacing = 1.5.sp)
+        }
+        item {
+            Surface(color = Color(0xFF1A0B0D), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("HELLO, DEVIL", color = Red, fontWeight = FontWeight.Bold)
+                    Text("আপনার ব্যক্তিগত AI কমান্ড সেন্টার", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+                    Text(if (hasApiKey) "Gemini API Key সংরক্ষিত" else "Offline Helper সক্রিয় • Gemini Key যোগ করা হয়নি", color = Muted, fontSize = 12.sp)
+                    Button(onClick = { onNavigate("Voice") }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
+                        Icon(Icons.Default.Mic, null); Spacer(Modifier.width(8.dp)); Text("HEY DEVIL • VOICE CONTROL")
+                    }
+                }
+            }
+        }
+        item { Text("ALL MODULES", color = White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
+        items(tiles.chunked(2)) { pair ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { tile ->
+                    Surface(
+                        onClick = { onNavigate(tile.destination) },
+                        modifier = Modifier.weight(1f).height(116.dp),
+                        color = Panel, shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Icon(tile.icon, null, tint = Red, modifier = Modifier.size(24.dp))
+                            Text(tile.title, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+                            Text(tile.subtitle, color = Muted, fontSize = 10.sp, maxLines = 2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardDevices(onNavigate: (String) -> Unit) {
+    val devices = listOf(
+        DashboardTile("Hisense VIDAA TV", "Alif Bedroom TV • 43A6Q", Icons.Default.Tv, "TV"),
+        DashboardTile("ONN Google TV Box", "HDMI-connected streaming box", Icons.Default.Cast, "TV"),
+        DashboardTile("MEGABOOM 3", "Bluetooth audio device", Icons.Default.Speaker, "Sound"),
+        DashboardTile("Sound Studio", "Phone volume & saved sound profiles", Icons.Default.Equalizer, "Sound")
+    )
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("DEVICE CENTER", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontSize = 18.sp)
+        Text("আপনার ডিভাইসগুলো আলাদা করে নির্বাচন করুন", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        devices.forEach { device ->
+            Surface(onClick = { onNavigate(device.destination) }, color = Panel, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Icon(device.icon, null, tint = Red, modifier = Modifier.size(28.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(device.title, color = White, fontWeight = FontWeight.SemiBold)
+                        Text(device.subtitle, color = Muted, fontSize = 11.sp)
+                    }
+                    Icon(Icons.Default.ChevronRight, null, tint = Muted)
+                }
+            }
+        }
+        Text("TV remote pairing এবং MEGABOOM 3-এর TV-hosted volume control এখনো protocol integration-এর অপেক্ষায়। এখানে কোনো সংযোগ সফল হয়েছে বলে দেখানো হচ্ছে না।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
     }
 }
