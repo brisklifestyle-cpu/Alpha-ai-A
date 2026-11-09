@@ -81,3 +81,11 @@ Voice স্ক্রিনে ম্যানুয়াল মাইক্রো
 
 - Social Media Manager-এর Post Composer-এ **Save Draft** চাপলে সর্বশেষ ক্যাপশন ফোনে স্থানীয়ভাবে সংরক্ষিত হয়।
 - অ্যাপ পুনরায় খুললে সর্বশেষ সংরক্ষিত খসড়া ফিরে আসে। এটি cloud sync নয়; একই ডিভাইসের app data-তে থাকে।
+
+
+## একাধিক Social Draft পরিচালনা
+
+- Post Composer থেকে একই ডিভাইসে একাধিক caption আলাদা খসড়া হিসেবে সেভ করা যায়।
+- **Saved Drafts** তালিকায় সংরক্ষিত খসড়াগুলো দেখা যায়; **খুলুন** চাপলে caption Composer-এ ফিরে আসে।
+- প্রতিটি খসড়া আলাদাভাবে Delete করা যায়।
+- খসড়াগুলো Android app-এর স্থানীয় SharedPreferences-এ JSON আকারে থাকে; cloud backup বা social platform-এ auto-publish হয় না।
