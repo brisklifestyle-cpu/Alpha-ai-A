@@ -57,6 +57,7 @@ fun PhoneCloneScreen() {
     var restoreSource by remember { mutableStateOf<Uri?>(null) }
     var busy by remember { mutableStateOf(false) }
     var history by remember { mutableStateOf(loadCloneHistory(context)) }
+    var dualMode by remember { mutableStateOf(false) }
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         selectedFiles.clear()
@@ -133,10 +134,15 @@ fun PhoneCloneScreen() {
                 )
                 Text("AES-256-GCM encryption ও PBKDF2 key derivation ব্যবহার করা হয়। Restore-এর সময় একই passphrase লাগবে। এটি ভুলে গেলে backup খোলা যাবে না।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
                 Button(
-                    onClick = { createBackup.launch("AlphaAI-PhoneClone.aiclon") },
+                    onClick = { dualMode = false; createBackup.launch("AlphaAI-PhoneClone.aiclon") },
                     enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts),
                     colors = ButtonDefaults.buttonColors(containerColor = CloneRed)
-                ) { Text("Encrypted Backup তৈরি করুন") }
+                ) { Text("এক জায়গায় Backup") }
+                OutlinedButton(
+                    onClick = { dualMode = true; createBackup.launch("AlphaAI-Local-PhoneClone.aiclon") },
+                    enabled = !busy && passphrase.length >= 8 && (selectedFiles.isNotEmpty() || includeContacts)
+                ) { Text("Local + Cloud Dual Backup") }
+                Text("Dual Backup-এ প্রথমে লোকাল destination বেছে নিন, তারপর দ্বিতীয় picker-এ Google Drive বা অন্য cloud destination নির্বাচন করুন। একই encrypted archive দুই জায়গায় কপি হবে।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
             }
         }
         Card(colors = CardDefaults.cardColors(containerColor = ClonePanel)) {
@@ -184,8 +190,8 @@ private fun writeEncryptedBackup(context: Context, target: Uri, files: List<Uri>
     val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
         init(Cipher.ENCRYPT_MODE, deriveCloneKey(passphrase, salt), GCMParameterSpec(128, iv))
     }
-    val raw = context.contentResolver.openOutputStream(target, "wt") ?: error("Backup destination খোলা যায়নি")
-    raw.use { output ->
+    val temp = File.createTempFile("alpha-clone-", ".aiclon", context.cacheDir)
+    temp.outputStream().use { output ->
         output.write("ALPHAIC1".toByteArray(Charsets.US_ASCII))
         output.write(salt)
         output.write(iv)
@@ -212,6 +218,10 @@ private fun writeEncryptedBackup(context: Context, target: Uri, files: List<Uri>
                 zip.finish()
         }
     }
+    try {
+        val destination = context.contentResolver.openOutputStream(target, "wt") ?: error("Backup destination খোলা যায়নি")
+        destination.use { output -> temp.inputStream().use { input -> input.copyTo(output) } }
+    } finally { temp.delete() }
 }
 
 private fun restoreEncryptedBackup(context: Context, source: Uri, destinationTree: Uri, passphrase: String): Int {
