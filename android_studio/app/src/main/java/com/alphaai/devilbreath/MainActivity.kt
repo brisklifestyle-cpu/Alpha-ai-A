@@ -130,6 +130,7 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                             Button(onClick = { page = "AI Chat" }, colors = ButtonDefaults.buttonColors(containerColor = Red)) { Icon(Icons.Default.Chat, null); Spacer(Modifier.width(8.dp)); Text("AI CHAT শুরু করুন") }
                         }
                     }
+                    TruecallerConnectCard()
                     Text("PHASE 1", color = Red, fontWeight = FontWeight.Bold)
                     listOf("Gemini AI Chat" to "ফ্রি tier quota সাপেক্ষ", "Voice input & spoken reply" to "ডিভাইসের speech service নির্ভর", "Offline Helper" to "সীমিত স্থানীয় সহায়তা").forEach {
                         Surface(color = Panel, shape = RoundedCornerShape(14.dp)) { Column(Modifier.padding(16.dp)) { Text(it.first, color = White, fontWeight = FontWeight.SemiBold); Text(it.second, color = Muted, fontSize = 12.sp) } }
