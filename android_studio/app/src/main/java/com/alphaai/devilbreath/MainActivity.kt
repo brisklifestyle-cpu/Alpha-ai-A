@@ -1,6 +1,8 @@
 package com.alphaai.devilbreath
 
+import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -153,7 +155,10 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                 "Social" -> SocialMediaManagerScreen()
                 "AI Chat", "Voice" -> Column(Modifier.fillMaxSize().padding(padding).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (page == "Voice") "HEY DEVIL • VOICE" else "ALPHA AI CHAT", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                    if (page == "Voice") Text(voiceStatus, color = Muted, fontSize = 12.sp)
+                    if (page == "Voice") {
+                        Text(voiceStatus, color = Muted, fontSize = 12.sp)
+                        Text("অফলাইন লোকাল কমান্ড: ফোন/ফোনে যুক্ত অডিওর মিডিয়া ভলিউম। TV-তে যুক্ত স্পিকারের ভলিউম TV নিয়ন্ত্রণের ওপর নির্ভর করে।", color = Muted, fontSize = 11.sp)
+                    }
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(chat) { line ->
                             Surface(color = if (line.fromUser) Color(0xFF351116) else Panel, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
@@ -173,8 +178,14 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                         }) { Icon(Icons.Default.Mic, "Voice", tint = Red) }
                         IconButton(enabled = prompt.isNotBlank() && !busy, onClick = {
                             val q = prompt.trim(); prompt = ""; chat.add(ChatLine(true, q)); busy = true
-                            if (online && apiKey.isNotBlank()) askAI(apiKey, q) { answer -> chat.add(ChatLine(false, answer)); busy = false; speak(answer) }
-                            else { val answer = offlineAnswer(q); chat.add(ChatLine(false, answer)); busy = false; speak(answer) }
+                            val localAnswer = performLocalCommand(context, q)
+                            if (localAnswer != null) {
+                                chat.add(ChatLine(false, localAnswer)); busy = false; speak(localAnswer)
+                            } else if (online && apiKey.isNotBlank()) {
+                                askAI(apiKey, q) { answer -> chat.add(ChatLine(false, answer)); busy = false; speak(answer) }
+                            } else {
+                                val answer = offlineAnswer(q); chat.add(ChatLine(false, answer)); busy = false; speak(answer)
+                            }
                         }) { Icon(Icons.Default.Send, "Send", tint = if (busy) Muted else Red) }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -197,6 +208,31 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                 }
             }
         }
+    }
+}
+
+private fun performLocalCommand(context: Context, q: String): String? {
+    val s = q.lowercase()
+    val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    val stream = AudioManager.STREAM_MUSIC
+    return when {
+        listOf("ভলিউম বাড়াও", "ভলিউম বাড়াও", "শব্দ বাড়াও", "শব্দ বাড়াও", "volume up", "increase volume", "বাড়িয়ে দাও", "বাড়িয়ে দাও").any { it in s } -> {
+            audio.adjustStreamVolume(stream, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+            "ফোনের মিডিয়া ভলিউম বাড়ানো হয়েছে।"
+        }
+        listOf("ভলিউম কমাও", "শব্দ কমাও", "volume down", "lower volume", "কমানো").any { it in s } -> {
+            audio.adjustStreamVolume(stream, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+            "ফোনের মিডিয়া ভলিউম কমানো হয়েছে।"
+        }
+        listOf("মিউট", "নিঃশব্দ", "mute").any { it in s } -> {
+            audio.adjustStreamVolume(stream, AudioManager.ADJUST_MUTE, AudioManager.FLAG_SHOW_UI)
+            "ফোনের মিডিয়া অডিও মিউট করা হয়েছে।"
+        }
+        listOf("আনমিউট", "unmute", "শব্দ চালু").any { it in s } -> {
+            audio.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, AudioManager.FLAG_SHOW_UI)
+            "ফোনের মিডিয়া অডিও আবার চালু করা হয়েছে।"
+        }
+        else -> null
     }
 }
 
