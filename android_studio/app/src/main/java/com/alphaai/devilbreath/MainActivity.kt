@@ -113,7 +113,7 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
     MaterialTheme(colorScheme = darkColorScheme(primary = Red, background = Bg, surface = Panel, onSurface = White)) {
         Scaffold(containerColor = Bg, bottomBar = {
             NavigationBar(containerColor = Color(0xFF101010)) {
-                listOf("Home" to Icons.Default.Home, "AI Chat" to Icons.Default.Chat, "Voice" to Icons.Default.Mic, "TV" to Icons.Default.Tv, "Settings" to Icons.Default.Settings).forEach { (name, icon) ->
+                listOf("Home" to Icons.Default.Home, "AI Chat" to Icons.Default.Chat, "Social" to Icons.Default.Share, "Voice" to Icons.Default.Mic, "TV" to Icons.Default.Tv, "Settings" to Icons.Default.Settings).forEach { (name, icon) ->
                     NavigationBarItem(selected = page == name, onClick = { page = name }, icon = { Icon(icon, null) }, label = { Text(name, fontSize = 10.sp) }, colors = NavigationBarItemDefaults.colors(selectedIconColor = Red, selectedTextColor = Red, indicatorColor = Color(0xFF351116), unselectedIconColor = Muted, unselectedTextColor = Muted))
                 }
             }
@@ -137,6 +137,7 @@ private fun AlphaApp(readKey: () -> String, saveKey: (String) -> Unit, askAI: (S
                     }
                 }
                 "TV" -> TvControlScreen()
+                "Social" -> SocialMediaManagerScreen()
                 "AI Chat", "Voice" -> Column(Modifier.fillMaxSize().padding(padding).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(if (page == "Voice") "HEY DEVIL • VOICE" else "ALPHA AI CHAT", color = Red, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                     LazyColumn(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
