@@ -22,8 +22,9 @@ private data class SocialApp(val name: String, val packageName: String, val url:
 @Composable
 fun SocialMediaManagerScreen() {
     val context = LocalContext.current
-    var caption by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("খসড়া লিখে কপি বা Share করুন।") }
+    val draftPrefs = remember { context.getSharedPreferences("alpha_social_drafts", Context.MODE_PRIVATE) }
+    var caption by remember { mutableStateOf(draftPrefs.getString("latest_caption", "") ?: "") }
+    var note by remember { mutableStateOf("খসড়া লিখে সেভ, কপি বা Share করুন।") }
     val apps = listOf(
         SocialApp("Facebook", "com.facebook.katana", "https://www.facebook.com/"),
         SocialApp("Instagram", "com.instagram.android", "https://www.instagram.com/"),
@@ -54,11 +55,15 @@ fun SocialMediaManagerScreen() {
                         note = "ক্যাপশন কপি হয়েছে। পছন্দের অ্যাপে পেস্ট করুন।"
                     }) { Text("কপি") }
                     OutlinedButton(enabled = caption.isNotBlank(), onClick = {
+                        draftPrefs.edit().putString("latest_caption", caption).apply()
+                        note = "খসড়া ফোনে সেভ হয়েছে।"
+                    }) { Text("Save Draft") }
+                    OutlinedButton(enabled = caption.isNotBlank(), onClick = {
                         val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, caption) }
                         context.startActivity(Intent.createChooser(send, "কোন অ্যাপে শেয়ার করবেন?"))
                         note = "Android Share Sheet খোলা হয়েছে।"
                     }) { Text("Share") }
-                    OutlinedButton(onClick = { caption = ""; note = "খসড়া মুছে দেওয়া হয়েছে।" }) { Text("মুছুন") }
+                    OutlinedButton(onClick = { caption = ""; draftPrefs.edit().remove("latest_caption").apply(); note = "খসড়া মুছে দেওয়া হয়েছে।" }) { Text("মুছুন") }
                 }
                 Text(note, color = Color(0xFFAAAAAA), style = MaterialTheme.typography.bodySmall)
             }
