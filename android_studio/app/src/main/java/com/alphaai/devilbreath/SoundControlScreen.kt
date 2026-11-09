@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.media.audiofx.Equalizer
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -59,6 +60,8 @@ fun SoundControlScreen() {
     var dynamics by remember { mutableFloatStateOf(prefs.getFloat("dynamics", 50f)) }
     var route by remember { mutableStateOf<SpeakerRoute?>(null) }
     var routeChecked by remember { mutableStateOf(false) }
+    var eqStatus by remember { mutableStateOf("ফোনের audio engine পরীক্ষা হচ্ছে…") }
+    val systemEq = remember { runCatching { Equalizer(0, 0).apply { enabled = true } }.getOrNull() }
     val muted = currentVolume == 0
     val percent = (currentVolume * 100f / maxVolume).roundToInt()
 
@@ -97,6 +100,30 @@ fun SoundControlScreen() {
     }
 
     LaunchedEffect(Unit) { refreshRoute() }
+    LaunchedEffect(bass, mid, treble, systemEq) {
+        val eq = systemEq
+        if (eq == null) {
+            eqStatus = "এই ফোনের Android audio engine global EQ অনুমোদন করেনি।"
+        } else {
+            val result = runCatching {
+                val count = eq.numberOfBands.toInt()
+                val range = eq.bandLevelRange
+                val maxBoost = range[1].toInt()
+                val minCut = range[0].toInt()
+                val values = listOf(bass, mid, treble, treble, treble)
+                for (i in 0 until count) {
+                    val value = values[(i * values.size / count).coerceIn(0, values.lastIndex)]
+                    val level = (minCut + (maxBoost - minCut) * (value / 100f)).roundToInt()
+                    eq.setBandLevel(i.toShort(), level.coerceIn(minCut, maxBoost).toShort())
+                }
+                eq.enabled = true
+            }
+            eqStatus = if (result.isSuccess) "ফোনের system audio EQ চালু আছে; Bluetooth output-এ প্রভাব পড়তে পারে।" else "ফোনের audio EQ প্রয়োগ করা যায়নি: ${result.exceptionOrNull()?.localizedMessage ?: "unsupported"}"
+        }
+    }
+    DisposableEffect(systemEq) {
+        onDispose { runCatching { systemEq?.release() } }
+    }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("ALPHA INTERNATIONAL SOUND EXPERIENCE", color = Color(0xFFE32636), style = MaterialTheme.typography.titleLarge)
@@ -137,6 +164,7 @@ fun SoundControlScreen() {
                 }
                 Text(soundPresets.firstOrNull { it.name == selectedPreset }?.description ?: "Custom listening profile", color = Color.LightGray)
                 Text("Selected profile: $selectedPreset", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Text(eqStatus, color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
             }
         }
 
@@ -166,7 +194,7 @@ fun SoundControlScreen() {
                 TextButton(onClick = { refreshRoute() }) { Text("ভলিউম ও সংযোগ Refresh") }
             }
         }
-        Text("গুরুত্বপূর্ণ: MEGABOOM 3 TV-তে Bluetooth দিয়ে যুক্ত থাকলে এই ফোনের slider TV-এর volume নিয়ন্ত্রণ করবে না। তখন Hisense TV/ONN-এর remote protocol দিয়ে আলাদা TV control লাগবে। EQ মানগুলো Alpha AI-তে profile হিসেবে save হয়; Bluetooth standard দিয়ে MEGABOOM 3-এর DSP/EQ সরাসরি বদলানো হচ্ছে না।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
+        Text("গুরুত্বপূর্ণ: Android global EQ সমর্থন করলে ফোন থেকে বের হওয়া অডিওতে প্রভাব ফেলতে পারে; এটি MEGABOOM 3-এর নিজস্ব DSP পরিবর্তন নয় এবং TV-এর নিজস্ব অ্যাপ/অন্য HDMI উৎসের অডিওতে কাজ নাও করতে পারে। TV-তে যুক্ত অবস্থায় volume নিয়ন্ত্রণের জন্য Hisense TV remote protocol এখনো আলাদা করে যুক্ত করতে হবে।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
     }
 }
 
