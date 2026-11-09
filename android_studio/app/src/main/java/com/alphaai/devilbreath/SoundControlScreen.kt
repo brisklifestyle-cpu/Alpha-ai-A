@@ -1,12 +1,16 @@
 package com.alphaai.devilbreath
 
 import android.content.Context
+import android.content.Intent
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.VolumeDown
 import androidx.compose.material.icons.filled.VolumeMute
 import androidx.compose.material.icons.filled.VolumeUp
@@ -20,25 +24,23 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 private data class SoundPreset(
-    val name: String,
-    val bass: Float,
-    val vocal: Float,
-    val clarity: Float,
-    val dynamics: Float,
-    val description: String
+    val name: String, val bass: Float, val mid: Float, val treble: Float,
+    val clarity: Float, val dynamics: Float, val description: String
 )
 
 private val soundPresets = listOf(
-    SoundPreset("International Hi-Fi", 50f, 50f, 75f, 65f, "Balanced, detailed everyday listening"),
-    SoundPreset("Bass", 90f, 45f, 55f, 80f, "Deep low-frequency emphasis"),
-    SoundPreset("Vocal", 35f, 90f, 75f, 50f, "Clear dialogue and vocals"),
-    SoundPreset("Boom", 100f, 40f, 60f, 95f, "High-impact bass character"),
-    SoundPreset("Cinematic", 75f, 65f, 85f, 90f, "Wide, dramatic movie character"),
-    SoundPreset("Broadcast", 30f, 85f, 90f, 55f, "Speech-first presentation"),
-    SoundPreset("Sports", 55f, 70f, 85f, 75f, "Commentary and crowd detail"),
-    SoundPreset("Night", 35f, 70f, 65f, 25f, "Reduced dynamic intensity"),
-    SoundPreset("Custom EQ", 50f, 50f, 50f, 50f, "Your own saved profile")
+    SoundPreset("International Hi-Fi", 50f, 55f, 65f, 75f, 65f, "Balanced detail, natural vocals and controlled bass"),
+    SoundPreset("Bass", 92f, 48f, 52f, 55f, 82f, "Deep low-end character"),
+    SoundPreset("Vocal", 35f, 88f, 72f, 82f, 52f, "Forward, clear voices and dialogue"),
+    SoundPreset("Boom", 100f, 42f, 58f, 58f, 95f, "Powerful, punchy listening character"),
+    SoundPreset("Cinematic", 76f, 62f, 84f, 86f, 90f, "Dramatic movie profile"),
+    SoundPreset("Broadcast", 30f, 86f, 90f, 92f, 55f, "Speech-first clarity"),
+    SoundPreset("Sports", 55f, 74f, 86f, 84f, 76f, "Commentary and crowd detail"),
+    SoundPreset("Night", 32f, 72f, 62f, 68f, 25f, "Gentler dynamics for late listening"),
+    SoundPreset("Custom EQ", 50f, 50f, 50f, 50f, 50f, "Your saved personal profile")
 )
+
+private data class SpeakerRoute(val name: String, val isMegaboom: Boolean)
 
 @Composable
 fun SoundControlScreen() {
@@ -51,24 +53,40 @@ fun SoundControlScreen() {
     var lastAudibleVolume by remember { mutableIntStateOf(currentVolume.coerceAtLeast(1)) }
     var selectedPreset by remember { mutableStateOf(prefs.getString("selected_preset", "International Hi-Fi") ?: "International Hi-Fi") }
     var bass by remember { mutableFloatStateOf(prefs.getFloat("bass", 50f)) }
-    var vocal by remember { mutableFloatStateOf(prefs.getFloat("vocal", 50f)) }
+    var mid by remember { mutableFloatStateOf(prefs.getFloat("mid", 50f)) }
+    var treble by remember { mutableFloatStateOf(prefs.getFloat("treble", 50f)) }
     var clarity by remember { mutableFloatStateOf(prefs.getFloat("clarity", 50f)) }
     var dynamics by remember { mutableFloatStateOf(prefs.getFloat("dynamics", 50f)) }
+    var route by remember { mutableStateOf<SpeakerRoute?>(null) }
+    var routeChecked by remember { mutableStateOf(false) }
     val muted = currentVolume == 0
     val percent = (currentVolume * 100f / maxVolume).roundToInt()
 
+    fun refreshRoute() {
+        val outputs = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        val bluetooth = outputs.firstOrNull {
+            it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                it.type == AudioDeviceInfo.TYPE_BLE_HEADSET ||
+                it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+        }
+        route = bluetooth?.let {
+            val label = runCatching { it.productName.toString() }.getOrDefault("Bluetooth audio device")
+            SpeakerRoute(label.ifBlank { "Bluetooth audio device" },
+                label.contains("megaboom", true) || label.contains("ue", true) || label.contains("ultimate ears", true))
+        }
+        routeChecked = true
+        currentVolume = audio.getStreamVolume(stream)
+    }
+
     fun saveProfile() {
-        prefs.edit()
-            .putString("selected_preset", selectedPreset)
-            .putFloat("bass", bass).putFloat("vocal", vocal)
+        prefs.edit().putString("selected_preset", selectedPreset)
+            .putFloat("bass", bass).putFloat("mid", mid).putFloat("treble", treble)
             .putFloat("clarity", clarity).putFloat("dynamics", dynamics).apply()
     }
     fun selectPreset(preset: SoundPreset) {
         selectedPreset = preset.name
-        bass = preset.bass
-        vocal = preset.vocal
-        clarity = preset.clarity
-        dynamics = preset.dynamics
+        bass = preset.bass; mid = preset.mid; treble = preset.treble
+        clarity = preset.clarity; dynamics = preset.dynamics
         saveProfile()
     }
     fun setVolume(value: Int) {
@@ -78,50 +96,65 @@ fun SoundControlScreen() {
         if (safe > 0) lastAudibleVolume = safe
     }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text("ALPHA INTERNATIONAL SOUND ENGINE", color = Color(0xFFE32636), style = MaterialTheme.typography.titleLarge)
-        Text("আপনার সাউন্ড প্রোফাইল Alpha AI-এর ভেতরেই তৈরি ও সংরক্ষণ করুন।", color = Color.LightGray)
+    LaunchedEffect(Unit) { refreshRoute() }
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text("ALPHA INTERNATIONAL SOUND EXPERIENCE", color = Color(0xFFE32636), style = MaterialTheme.typography.titleLarge)
+        Text("একটি আলাদা listening studio—এক ট্যাপে সাউন্ড মোড, নিজের EQ প্রোফাইল এবং স্পিকার সংযোগের অবস্থা।", color = Color.LightGray)
 
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF202020)), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("SOUND PROFILES", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Bluetooth, contentDescription = null, tint = Color(0xFFE32636))
+                    Text("MEGABOOM 3 • DEVICE SETUP", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
+                }
+                if (!routeChecked) Text("Bluetooth audio route পরীক্ষা হচ্ছে…", color = Color.LightGray)
+                else if (route == null) {
+                    Text("ফোনে কোনো Bluetooth audio output route শনাক্ত হয়নি।", color = Color.LightGray)
+                    Text("MEGABOOM 3 যদি Hisense TV-তে যুক্ত থাকে, ফোনে এটি connected দেখাবে না—এটি স্বাভাবিক।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(if (route!!.isMegaboom) "Bluetooth speaker route পাওয়া গেছে: ${route!!.name}" else "Bluetooth audio route: ${route!!.name}", color = Color.White)
+                    Text(if (route!!.isMegaboom) "MEGABOOM 3 নামের সঙ্গে মিল পাওয়া গেছে। ফোনের media volume এই Bluetooth route-এ পাঠানো হবে।" else "Bluetooth audio সংযুক্ত। MEGABOOM 3 হিসেবে নিশ্চিত করা যায়নি।", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { refreshRoute() }, modifier = Modifier.weight(1f)) { Text("Refresh status") }
+                    Button(onClick = { context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS)) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE32636))) { Text("Pair / Connect") }
+                }
+            }
+        }
+
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF202020)), shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("ONE-TOUCH SOUND EXPERIENCES", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
                 soundPresets.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         row.forEach { preset ->
-                            FilterChip(
-                                selected = selectedPreset == preset.name,
-                                onClick = { selectPreset(preset) },
-                                label = { Text(preset.name, maxLines = 1) },
-                                modifier = Modifier.weight(1f)
-                            )
+                            FilterChip(selected = selectedPreset == preset.name, onClick = { selectPreset(preset) },
+                                label = { Text(preset.name, maxLines = 1) }, modifier = Modifier.weight(1f))
                         }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                Text(soundPresets.firstOrNull { it.name == selectedPreset }?.description ?: "Custom sound profile", color = Color.LightGray)
+                Text(soundPresets.firstOrNull { it.name == selectedPreset }?.description ?: "Custom listening profile", color = Color.LightGray)
+                Text("Selected profile: $selectedPreset", color = Color.White, style = MaterialTheme.typography.labelLarge)
             }
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF202020)), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("CUSTOM TUNING", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
+                Text("PERSONAL EQ PROFILE", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
                 SoundParameter("Bass", bass) { bass = it; selectedPreset = "Custom EQ" }
-                SoundParameter("Vocal", vocal) { vocal = it; selectedPreset = "Custom EQ" }
+                SoundParameter("Mid / Vocal body", mid) { mid = it; selectedPreset = "Custom EQ" }
+                SoundParameter("Treble", treble) { treble = it; selectedPreset = "Custom EQ" }
                 SoundParameter("Clarity", clarity) { clarity = it; selectedPreset = "Custom EQ" }
                 SoundParameter("Dynamic Range", dynamics) { dynamics = it; selectedPreset = "Custom EQ" }
-                Button(onClick = { saveProfile() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE32636))) {
-                    Text("Save My Custom Profile")
-                }
-                Text("প্রোফাইলটি Alpha AI-তে সংরক্ষিত। এটি এখনো MEGABOOM 3 বা TV-তে DSP/EQ প্রয়োগ করছে না।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { saveProfile() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE32636))) { Text("Save My Sound Profile") }
             }
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF202020)), shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("PHONE MEDIA VOLUME", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
+                Text(if (route != null) "PHONE → BLUETOOTH VOLUME" else "PHONE MEDIA VOLUME", color = Color(0xFFE32636), style = MaterialTheme.typography.titleMedium)
                 Icon(if (muted) Icons.Default.VolumeMute else if (percent < 50) Icons.Default.VolumeDown else Icons.Default.VolumeUp, contentDescription = null, tint = Color(0xFFE32636), modifier = Modifier.size(42.dp))
                 Text("$percent%", color = Color.White, style = MaterialTheme.typography.headlineLarge)
                 Slider(value = currentVolume.toFloat(), onValueChange = { setVolume(it.roundToInt()) }, valueRange = 0f..maxVolume.toFloat(), modifier = Modifier.fillMaxWidth())
@@ -130,10 +163,10 @@ fun SoundControlScreen() {
                     Button(onClick = { setVolume(if (muted) lastAudibleVolume else 0) }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE32636))) { Text(if (muted) "Unmute" else "Mute") }
                     OutlinedButton(onClick = { setVolume(currentVolume + 1) }, modifier = Modifier.weight(1f)) { Text("+ বাড়ান") }
                 }
-                TextButton(onClick = { currentVolume = audio.getStreamVolume(stream) }) { Text("ভলিউম রিফ্রেশ") }
+                TextButton(onClick = { refreshRoute() }) { Text("ভলিউম ও সংযোগ Refresh") }
             }
         }
-        Text("ডিভাইস সীমাবদ্ধতা: এই ভলিউম Android ফোনের Media stream নিয়ন্ত্রণ করে। MEGABOOM 3 TV-তে Bluetooth দিয়ে যুক্ত থাকলে ফোনের এই slider TV-এর volume বদলায় না। ফোনে যুক্ত থাকলেও প্রকৃত EQ প্রয়োগ আলাদা audio-processing integration ছাড়া নিশ্চিত নয়।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
+        Text("গুরুত্বপূর্ণ: MEGABOOM 3 TV-তে Bluetooth দিয়ে যুক্ত থাকলে এই ফোনের slider TV-এর volume নিয়ন্ত্রণ করবে না। তখন Hisense TV/ONN-এর remote protocol দিয়ে আলাদা TV control লাগবে। EQ মানগুলো Alpha AI-তে profile হিসেবে save হয়; Bluetooth standard দিয়ে MEGABOOM 3-এর DSP/EQ সরাসরি বদলানো হচ্ছে না।", color = Color(0xFFFFCC80), style = MaterialTheme.typography.bodySmall)
     }
 }
 
