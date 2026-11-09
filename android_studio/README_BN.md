@@ -54,3 +54,17 @@ Voice স্ক্রিনে ম্যানুয়াল মাইক্রো
 - “ফোন খোলো” / “open phone”
 
 এসব কমান্ড ফোনের Android settings screen বা ইনস্টল করা অ্যাপ খুলবে; এগুলো ইন্টারনেট ছাড়াই স্থানীয়ভাবে চালানো হয়। অ্যাপটি ইনস্টল না থাকলে বা Android screen উপলভ্য না হলে উপযুক্ত বার্তা দেখাবে। নিরাপত্তার কারণে কল শুরু করা হয় না—শুধু Phone dialer খোলা হয়।
+
+
+## Social Media Manager
+
+- Social ট্যাবে Facebook, Instagram, YouTube, TikTok, X ও LinkedIn খোলা যায়; ইনস্টল না থাকলে ওয়েবসাইট খোলে।
+- প্রতিটি ইনস্টল করা অ্যাপের **App info** থেকে Android-এর Permission, Storage ও Notification settings-এ যাওয়া যায়।
+- Post Composer-এ caption লিখে কপি অথবা Android Share Sheet দিয়ে অন্য অ্যাপে পাঠানো যায়।
+- এই ধাপে কোনো social account-এর password/OAuth নেওয়া হয় না এবং স্বয়ংক্রিয়ভাবে পোস্ট/মেসেজ প্রকাশ বা inbox পড়া হয় না। এগুলোর জন্য platform-approved API ও OAuth access প্রয়োজন।
+
+## Caller / Truecaller Integration
+
+- নতুন Caller ট্যাব থেকে Truecaller ইনস্টল আছে কি না দেখা, অ্যাপ খোলা এবং App info-তে যাওয়া যায়।
+- Caller ID ও Spam Protection চালু করতে Truecaller অ্যাপের নিজস্ব সেটআপ অনুসরণ করতে হবে।
+- Alpha AI নিজে caller database, live caller identification বা spam blocking করছে না; এই ধাপে Call Log, Contacts বা Phone permission চাওয়া হয় না।
