@@ -282,52 +282,74 @@ private data class DashboardTile(val title: String, val subtitle: String, val ic
 @Composable
 private fun DashboardHome(hasApiKey: Boolean, onNavigate: (String) -> Unit) {
     val tiles = listOf(
-        DashboardTile("Voice Assistant", "Hey Devil • বাংলা ও English", Icons.Default.Mic, "Voice"),
-        DashboardTile("AI Chat", "Gemini ও Offline Helper", Icons.Default.Chat, "AI Chat"),
-        DashboardTile("TV Control", "Hisense VIDAA ও ONN Box", Icons.Default.Tv, "TV"),
-        DashboardTile("Sound Studio", "Alpha International Sound Engine", Icons.Default.VolumeUp, "Sound"),
-        DashboardTile("Phone Manager", "Contacts ও Dialer", Icons.Default.PhoneAndroid, "Contacts"),
-        DashboardTile("Phone Clone", "Encrypted backup ও restore", Icons.Default.Security, "Clone"),
-        DashboardTile("Social Manager", "Apps ও saved post drafts", Icons.Default.Share, "Social"),
-        DashboardTile("Caller ID", "Truecaller app integration", Icons.Default.Call, "Caller")
+        DashboardTile("AI Assistant", "Devil Breath", Icons.Default.SmartToy, "AI Chat"),
+        DashboardTile("Sound Studio", "International EQ", Icons.Default.Equalizer, "Sound"),
+        DashboardTile("TV Control", "Hisense • ONN", Icons.Default.Tv, "TV"),
+        DashboardTile("MEGABOOM 3", "Bluetooth Audio", Icons.Default.Speaker, "Sound"),
+        DashboardTile("Phone Manager", "Apps & Contacts", Icons.Default.PhoneAndroid, "Contacts"),
+        DashboardTile("Backup & Clone", "Backup & Restore", Icons.Default.Security, "Clone"),
+        DashboardTile("Social Manager", "Social Apps", Icons.Default.Forum, "Social"),
+        DashboardTile("Connect Center", "Devices & Services", Icons.Default.Link, "Devices")
+    )
+    val neon = listOf(
+        Color(0xFF13B9FF), Color(0xFFE52BFF), Color(0xFFFF3030), Color(0xFF8DFF32),
+        Color(0xFFB45CFF), Color(0xFF00E5C0), Color(0xFFFFB52E), Color(0xFF26C6DA)
     )
     LazyColumn(
-        Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(top = 18.dp, bottom = 24.dp),
+        Modifier.fillMaxSize().padding(horizontal = 12.dp),
+        contentPadding = PaddingValues(top = 14.dp, bottom = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("ALPHA AI", color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-            Text("DEVIL BREATH • COMMAND CENTER", color = Red, fontSize = 11.sp, letterSpacing = 1.5.sp)
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Icon(Icons.Default.ChangeHistory, null, tint = Red, modifier = Modifier.size(64.dp))
+                Text("Alpha AI", color = White, fontSize = 29.sp, fontWeight = FontWeight.ExtraBold)
+                Text("Devil Breath", color = Red, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("YOUR SMART AI CONTROL CENTER", color = Muted, fontSize = 9.sp, letterSpacing = 1.4.sp)
+                Text(if (hasApiKey) "● ONLINE READY" else "● OFFLINE HELPER READY", color = Color(0xFF00E676), fontSize = 10.sp)
+            }
         }
         item {
-            Surface(color = Color(0xFF1A0B0D), shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("HELLO, DEVIL", color = Red, fontWeight = FontWeight.Bold)
-                    Text("আপনার ব্যক্তিগত AI কমান্ড সেন্টার", color = White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                    Text(if (hasApiKey) "Gemini API Key সংরক্ষিত" else "Offline Helper সক্রিয় • Gemini Key যোগ করা হয়নি", color = Muted, fontSize = 12.sp)
-                    Button(onClick = { onNavigate("Voice") }, colors = ButtonDefaults.buttonColors(containerColor = Red)) {
-                        Icon(Icons.Default.Mic, null); Spacer(Modifier.width(8.dp)); Text("HEY DEVIL • VOICE CONTROL")
+            Surface(
+                onClick = { onNavigate("Voice") },
+                color = Color(0xFF17090C),
+                shape = RoundedCornerShape(24.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF7D1722)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                    Icon(Icons.Default.GraphicEq, null, tint = Red, modifier = Modifier.size(36.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("Hey Devil", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text("Tap to Speak • Voice Assistant", color = Muted, fontSize = 11.sp)
                     }
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Default.Mic, null, tint = Red, modifier = Modifier.size(27.dp))
                 }
             }
         }
-        item { Text("ALL MODULES", color = White, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) }
-        items(tiles.chunked(2)) { pair ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                pair.forEach { tile ->
+        item {
+            Text("SMART CONTROL MODULES", color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+        }
+        items(tiles.chunked(4)) { group ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                group.forEachIndexed { index, tile ->
+                    val tint = neon[(tiles.indexOf(tile)).coerceIn(0, neon.lastIndex)]
                     Surface(
                         onClick = { onNavigate(tile.destination) },
-                        modifier = Modifier.weight(1f).height(116.dp),
-                        color = Panel, shape = RoundedCornerShape(18.dp)
+                        modifier = Modifier.weight(1f).height(105.dp),
+                        color = Color(0xFF090B10),
+                        shape = RoundedCornerShape(15.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, tint.copy(alpha = 0.42f))
                     ) {
-                        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            Icon(tile.icon, null, tint = Red, modifier = Modifier.size(24.dp))
-                            Text(tile.title, color = White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
-                            Text(tile.subtitle, color = Muted, fontSize = 10.sp, maxLines = 2)
+                        Column(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            Icon(tile.icon, null, tint = tint, modifier = Modifier.size(27.dp))
+                            Text(tile.title, color = White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 11.sp)
                         }
                     }
                 }
+                repeat((4 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
