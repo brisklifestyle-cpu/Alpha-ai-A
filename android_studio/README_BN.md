@@ -68,3 +68,16 @@ Voice স্ক্রিনে ম্যানুয়াল মাইক্রো
 - নতুন Caller ট্যাব থেকে Truecaller ইনস্টল আছে কি না দেখা, অ্যাপ খোলা এবং App info-তে যাওয়া যায়।
 - Caller ID ও Spam Protection চালু করতে Truecaller অ্যাপের নিজস্ব সেটআপ অনুসরণ করতে হবে।
 - Alpha AI নিজে caller database, live caller identification বা spam blocking করছে না; এই ধাপে Call Log, Contacts বা Phone permission চাওয়া হয় না।
+
+
+## Contacts & Dialer Integration
+
+- নতুন **Contacts** ট্যাব থেকে ব্যবহারকারী নিজে Contacts permission দিলে নাম বা নম্বর দিয়ে ফোনের Contacts খোঁজা যায়।
+- কোনো নম্বরের পাশে **Dial** চাপলে Android Phone Dialer খোলে; কলটি ব্যবহারকারী নিজে নিশ্চিত করেন।
+- Alpha AI কল লগ পড়ে না, কল রেকর্ড করে না এবং নিজে থেকে কল করে না।
+- Contacts permission না দিলে contact search ব্যবহার করা যাবে না; অন্য ফিচার স্বাভাবিকভাবে থাকবে।
+
+## Social Draft Save
+
+- Social Media Manager-এর Post Composer-এ **Save Draft** চাপলে সর্বশেষ ক্যাপশন ফোনে স্থানীয়ভাবে সংরক্ষিত হয়।
+- অ্যাপ পুনরায় খুললে সর্বশেষ সংরক্ষিত খসড়া ফিরে আসে। এটি cloud sync নয়; একই ডিভাইসের app data-তে থাকে।
