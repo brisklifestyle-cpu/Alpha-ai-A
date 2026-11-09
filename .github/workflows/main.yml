@@ -32,15 +32,19 @@ jobs:
         run: |
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Extract Android project
+      - name: Select Android project source
         run: |
-          unzip -o AlphaAI_DevilBreath_AndroidStudio_Starter.zip -d source
-          PROJECT_FILE=$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
-          if [ -z "$PROJECT_FILE" ]; then
-            echo "Gradle project not found"
-            exit 1
+          if [ -f "android_studio/settings.gradle.kts" ]; then
+            PROJECT_DIR="$GITHUB_WORKSPACE/android_studio"
+          else
+            unzip -o AlphaAI_DevilBreath_AndroidStudio_Starter.zip -d source
+            PROJECT_FILE=$(find source -type f \( -name settings.gradle -o -name settings.gradle.kts \) | head -n 1)
+            if [ -z "$PROJECT_FILE" ]; then
+              echo "Gradle project not found"
+              exit 1
+            fi
+            PROJECT_DIR=$(dirname "$PROJECT_FILE")
           fi
-          PROJECT_DIR=$(dirname "$PROJECT_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
 
       - name: Package extracted Android source for review
