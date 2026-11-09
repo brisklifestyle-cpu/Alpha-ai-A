@@ -335,7 +335,7 @@ private fun DashboardHome(hasApiKey: Boolean, onNavigate: (String) -> Unit) {
                 }
             }
             item { Text("SMART CONTROL MODULES", color = White, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp) }
-            items(tiles.chunked(4)) { group ->
+            items(tiles.chunked(2)) { group ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     group.forEach { tile ->
                         val tint = neon[tiles.indexOf(tile).coerceIn(0, neon.lastIndex)]
