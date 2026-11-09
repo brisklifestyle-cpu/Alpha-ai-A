@@ -216,7 +216,33 @@ private fun performLocalCommand(context: Context, q: String): String? {
     val s = q.lowercase()
     val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     val stream = AudioManager.STREAM_MUSIC
+    fun openIntent(intent: Intent, success: String): String {
+        return try {
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            success
+        } catch (_: Exception) {
+            "এই কাজটি করার উপযুক্ত অ্যাপ বা Android screen পাওয়া যায়নি।"
+        }
+    }
     return when {
+        listOf("ইউটিউব খোলো", "ইউটিউব চালু", "open youtube", "launch youtube").any { it in s } -> {
+            val launch = context.packageManager.getLaunchIntentForPackage("com.google.android.youtube")
+            if (launch != null) openIntent(launch, "YouTube খোলা হচ্ছে।")
+            else openIntent(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.youtube.com")), "YouTube খোলা হচ্ছে।")
+        }
+        listOf("ক্যামেরা খোলো", "ক্যামেরা চালু", "open camera", "launch camera").any { it in s } ->
+            openIntent(Intent("android.media.action.IMAGE_CAPTURE"), "ক্যামেরা খোলা হচ্ছে।")
+        listOf("ফোন খোলো", "কল করার অ্যাপ", "open phone", "open dialer").any { it in s } ->
+            openIntent(Intent(Intent.ACTION_DIAL), "Phone dialer খোলা হচ্ছে।")
+        listOf("ওয়াইফাই সেটিংস", "ওয়াইফাই সেটিংস", "wifi settings", "open wifi").any { it in s } ->
+            openIntent(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS), "Wi-Fi settings খোলা হচ্ছে।")
+        listOf("ব্লুটুথ সেটিংস", "bluetooth settings", "open bluetooth").any { it in s } ->
+            openIntent(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS), "Bluetooth settings খোলা হচ্ছে।")
+        listOf("সাউন্ড সেটিংস", "শব্দের সেটিংস", "sound settings").any { it in s } ->
+            openIntent(Intent(android.provider.Settings.ACTION_SOUND_SETTINGS), "Sound settings খোলা হচ্ছে।")
+        listOf("সেটিংস খোলো", "সেটিংস চালু", "open settings", "launch settings").any { it in s } ->
+            openIntent(Intent(android.provider.Settings.ACTION_SETTINGS), "Android Settings খোলা হচ্ছে।")
         listOf("ভলিউম বাড়াও", "ভলিউম বাড়াও", "শব্দ বাড়াও", "শব্দ বাড়াও", "volume up", "increase volume", "বাড়িয়ে দাও", "বাড়িয়ে দাও").any { it in s } -> {
             audio.adjustStreamVolume(stream, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
             "ফোনের মিডিয়া ভলিউম বাড়ানো হয়েছে।"
