@@ -50,11 +50,14 @@ jobs:
       - name: Package extracted Android source for review
         if: always()
         run: |
-          if [ -d source ]; then
+          if [ -d android_studio ]; then
+            find android_studio -type f | sort > alphaai-source-manifest.txt
+            zip -qr alphaai-source-review.zip android_studio
+          elif [ -d source ]; then
             find source -type f | sort > alphaai-source-manifest.txt
             zip -qr alphaai-source-review.zip source
           else
-            echo "Source extraction directory missing" > alphaai-source-manifest.txt
+            echo "Source directory missing" > alphaai-source-manifest.txt
           fi
 
       - name: Upload Android source for review
@@ -122,5 +125,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: AlphaAI-Debug-APK
-          path: source/**/app/build/outputs/apk/debug/*.apk
+          path: |
+            android_studio/app/build/outputs/apk/debug/*.apk
+            source/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
