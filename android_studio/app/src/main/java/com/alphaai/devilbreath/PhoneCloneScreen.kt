@@ -172,8 +172,8 @@ private fun writeEncryptedBackup(context: Context, target: Uri, files: List<Uri>
         output.write("ALPHAIC1".toByteArray(Charsets.US_ASCII))
         output.write(salt)
         output.write(iv)
-        CipherOutputStream(BufferedOutputStream(output), cipher).use { encrypted ->
-            ZipOutputStream(encrypted).use { zip ->
+        val encrypted = CipherOutputStream(BufferedOutputStream(output), cipher)
+        ZipOutputStream(encrypted).use { zip ->
                 files.forEachIndexed { index, uri ->
                     val name = queryDisplayName(context, uri).replace(Regex("[/\\\\\\\\:*?\"<>|]"), "_").ifBlank { "file_$index" }
                     zip.putNextEntry(ZipEntry("files/${index}_$name"))
@@ -193,7 +193,6 @@ private fun writeEncryptedBackup(context: Context, target: Uri, files: List<Uri>
                     zip.closeEntry()
                 }
                 zip.finish()
-            }
         }
     }
 }
@@ -210,8 +209,8 @@ private fun restoreEncryptedBackup(context: Context, source: Uri, destinationTre
             init(Cipher.DECRYPT_MODE, deriveCloneKey(passphrase, salt), GCMParameterSpec(128, iv))
         }
         var restored = 0
-        CipherInputStream(raw, cipher).use { decrypted ->
-            ZipInputStream(decrypted).use { zip ->
+        val decrypted = CipherInputStream(raw, cipher)
+        ZipInputStream(decrypted).use { zip ->
                 while (true) {
                     val entry = zip.nextEntry ?: break
                     if (!entry.isDirectory) {
@@ -225,7 +224,6 @@ private fun restoreEncryptedBackup(context: Context, source: Uri, destinationTre
                     }
                     zip.closeEntry()
                 }
-            }
         }
         return restored
     }
