@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,12 +20,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 private data class SocialApp(val name: String, val packageName: String, val url: String)
+private data class SocialDraft(val id: Long, val title: String, val caption: String, val savedAt: Long)
+
+private fun loadSocialDrafts(context: Context): List<SocialDraft> {
+    val raw = context.getSharedPreferences("alpha_social_drafts", Context.MODE_PRIVATE).getString("draft_list", "[]") ?: "[]"
+    return runCatching {
+        val array = JSONArray(raw)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            SocialDraft(item.optLong("id"), item.optString("title"), item.optString("caption"), item.optLong("savedAt"))
+        }.sortedByDescending { it.savedAt }
+    }.getOrDefault(emptyList())
+}
+
+private fun persistSocialDrafts(context: Context, drafts: List<SocialDraft>) {
+    val array = JSONArray()
+    drafts.forEach { draft ->
+        array.put(JSONObject().put("id", draft.id).put("title", draft.title).put("caption", draft.caption).put("savedAt", draft.savedAt))
+    }
+    context.getSharedPreferences("alpha_social_drafts", Context.MODE_PRIVATE).edit().putString("draft_list", array.toString()).apply()
+}
 
 @Composable
 fun SocialMediaManagerScreen() {
     val context = LocalContext.current
     val draftPrefs = remember { context.getSharedPreferences("alpha_social_drafts", Context.MODE_PRIVATE) }
     var caption by remember { mutableStateOf(draftPrefs.getString("latest_caption", "") ?: "") }
+    val drafts = remember { mutableStateListOf<SocialDraft>().apply { addAll(loadSocialDrafts(context)) } }
     var note by remember { mutableStateOf("খসড়া লিখে সেভ, কপি বা Share করুন।") }
     val apps = listOf(
         SocialApp("Facebook", "com.facebook.katana", "https://www.facebook.com/"),
@@ -55,8 +78,12 @@ fun SocialMediaManagerScreen() {
                         note = "ক্যাপশন কপি হয়েছে। পছন্দের অ্যাপে পেস্ট করুন।"
                     }) { Text("কপি") }
                     OutlinedButton(enabled = caption.isNotBlank(), onClick = {
+                        val now = System.currentTimeMillis()
+                        val draft = SocialDraft(now, "খসড়া ${drafts.size + 1}", caption.trim(), now)
+                        drafts.add(0, draft)
+                        persistSocialDrafts(context, drafts)
                         draftPrefs.edit().putString("latest_caption", caption).apply()
-                        note = "খসড়া ফোনে সেভ হয়েছে।"
+                        note = "নতুন খসড়া তালিকায় সেভ হয়েছে। মোট ${drafts.size}টি খসড়া।"
                     }) { Text("Save Draft") }
                     OutlinedButton(enabled = caption.isNotBlank(), onClick = {
                         val send = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, caption) }
@@ -66,6 +93,33 @@ fun SocialMediaManagerScreen() {
                     OutlinedButton(onClick = { caption = ""; draftPrefs.edit().remove("latest_caption").apply(); note = "খসড়া মুছে দেওয়া হয়েছে।" }) { Text("মুছুন") }
                 }
                 Text(note, color = Color(0xFFAAAAAA), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF171717))) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("SAVED DRAFTS", color = Color(0xFFE32636), fontWeight = FontWeight.Bold)
+                    Text("${drafts.size}টি", color = Color.LightGray, style = MaterialTheme.typography.bodySmall)
+                }
+                if (drafts.isEmpty()) {
+                    Text("এখনো কোনো খসড়া সেভ করা হয়নি।", color = Color.LightGray)
+                } else {
+                    drafts.forEach { draft ->
+                        HorizontalDivider(color = Color.DarkGray)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(draft.title, color = Color.White, fontWeight = FontWeight.SemiBold)
+                            Text(draft.caption, color = Color.LightGray, maxLines = 3, style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { caption = draft.caption; note = "খসড়া composer-এ লোড হয়েছে।" }) { Text("খুলুন") }
+                                OutlinedButton(onClick = {
+                                    drafts.removeAll { it.id == draft.id }
+                                    persistSocialDrafts(context, drafts)
+                                    note = "নির্বাচিত খসড়া মুছে দেওয়া হয়েছে।"
+                                }) { Text("Delete") }
+                            }
+                        }
+                    }
+                }
             }
         }
         OutlinedButton(
