@@ -7,7 +7,8 @@
 The Android Studio project is in `android_studio/`.
 
 - Bengali/English Gemini chat (user supplies their own API key in app Settings).
-- Android speech recognition for voice input and Android Text-to-Speech for spoken replies.
+- Android speech recognition for manual voice input and Android Text-to-Speech for spoken replies.
+- Manual voice input recognizes the “Hey Devil” / “হেই ডেভিল” prefix; always-listening wake-word service is not implemented yet.
 - Encrypted local storage for the Gemini API key.
 - Offline Helper for a small set of local responses.
 - Home, AI Chat, Voice, Social and TV screens.
